@@ -21,6 +21,7 @@ import com.google.android.exoplayer2.SimpleExoPlayer;
 import com.google.android.exoplayer2.Timeline;
 import com.google.android.exoplayer2.extractor.DefaultExtractorsFactory;
 import com.google.android.exoplayer2.source.ExtractorMediaSource;
+import com.google.android.exoplayer2.source.LoopingMediaSource;
 import com.google.android.exoplayer2.source.MediaSource;
 import com.google.android.exoplayer2.source.TrackGroupArray;
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector;
@@ -55,14 +56,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         super.onCreate(savedInstanceState);
         mContext = this;
         initview();
-        fetchfile();
+
     }
 
     private void fetchfile() {
         try {
             Uri uri = Uri.parse("android.resource://" + getPackageName() + "/raw/song");
-
-
            /*Uri uri = RawResourceDataSource.buildRawResourceUri(R.raw.song);*/
             prepareExoPlayerFromFileUri(uri);
         } catch (Exception e) {
@@ -74,16 +73,36 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         exoPlayer = ExoPlayerFactory.newSimpleInstance(this, new DefaultTrackSelector(null),
                 new DefaultLoadControl());
         exoPlayer.addListener(eventListener);
+        try {
+            DataSpec dataSpec = new DataSpec(RawResourceDataSource.buildRawResourceUri(R.raw.song));
+            final RawResourceDataSource rawResourceDataSource = new RawResourceDataSource(mContext);
+            rawResourceDataSource.open(dataSpec);
+            DataSource.Factory factory = new DataSource.Factory() {
+                @Override
+                public DataSource createDataSource() {
+                    return rawResourceDataSource;
+                }
+            };
+            MediaSource audioSource = new ExtractorMediaSource(rawResourceDataSource.getUri(),
+                    factory, new DefaultExtractorsFactory(), null, null);
+            LoopingMediaSource loopingMediaSource = new LoopingMediaSource(audioSource);
+            /*exoPlayer.prepare(loopingMediaSource);*/
+            exoPlayer.prepare(audioSource);
+            exoPlayer.setPlayWhenReady(true);
+            initMediaControls();
+        }catch (Exception e){
+            e.printStackTrace();
+        }
 
-        DataSpec dataSpec = new DataSpec(uri);
-        final FileDataSource fileDataSource = new FileDataSource();
+        /*DataSpec dataSpec = new DataSpec(uri);
+       final FileDataSource fileDataSource = new FileDataSource();
         try {
             fileDataSource.open(dataSpec);
         } catch (FileDataSource.FileDataSourceException e) {
             e.printStackTrace();
         }
 
-        DataSource.Factory factory = new DataSource.Factory() {
+        RawResourceDataSource.Factory factory = new DataSource.Factory() {
             @Override
             public DataSource createDataSource() {
                 return fileDataSource;
@@ -93,7 +112,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 factory, new DefaultExtractorsFactory(), null, null);
 
         exoPlayer.prepare(audioSource);
-        initMediaControls();
+        initMediaControls();*/
     }
 
     private void initMediaControls() {
@@ -194,6 +213,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     @Override
     public void onClick(View view) {
         if (view == binding.ivPlay) {
+            fetchfile();
             binding.ivPlay.requestFocus();
             setPlayPause(!isPlaying);
         }
